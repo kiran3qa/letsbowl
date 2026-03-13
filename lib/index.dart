@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const LetsBowlApp());
@@ -23,32 +23,31 @@ class LetsBowlApp extends StatelessWidget {
 }
 
 class LetsBowlTheme {
-  static const Color black = Color(0xFF0B0B0B);
-  static const Color softBlack = Color(0xFF171717);
-  static const Color cardBlack = Color(0xFF121212);
-  static const Color white = Color(0xFFF8F5EF);
+  static const Color black = Color(0xFF0E0F12);
+  static const Color surface = Color(0xFF171A20);
+  static const Color softBlack = Color(0xFF20242B);
+  static const Color white = Color(0xFFF8F7F3);
   static const Color pureWhite = Colors.white;
-  static const Color red = Color(0xFFC51623);
-  static const Color darkRed = Color(0xFF7E0E16);
-  static const Color gold = Color(0xFFD4AF37);
-  static const Color deepGold = Color(0xFF8E6B12);
-  static const Color muted = Color(0xFFBBBBBB);
+  static const Color red = Color(0xFFD72638);
+  static const Color richRed = Color(0xFFA91524);
+  static const Color gold = Color(0xFFE0B84F);
+  static const Color muted = Color(0xFFD6D0C7);
 
   static ThemeData get theme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Roboto',
       scaffoldBackgroundColor: black,
       colorScheme: const ColorScheme.dark(
         primary: red,
         secondary: gold,
-        surface: softBlack,
+        surface: surface,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: black,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
       ),
-      fontFamily: 'Roboto',
     );
   }
 }
@@ -71,6 +70,39 @@ class LetsBowlLinks {
   static final Uri youtube = Uri.parse('https://www.youtube.com/');
 }
 
+class ActivityItem {
+  final String title;
+  final IconData icon;
+  final String tag;
+
+  const ActivityItem(this.title, this.icon, this.tag);
+}
+
+class OfferItem {
+  final String label;
+  final String title;
+  final String subtitle;
+
+  const OfferItem(this.label, this.title, this.subtitle);
+}
+
+class ReviewItem {
+  final String initials;
+  final String name;
+  final String meta;
+  final String review;
+
+  const ReviewItem(this.initials, this.name, this.meta, this.review);
+}
+
+class GalleryItem {
+  final String title;
+  final String subtitle;
+  final String image;
+
+  const GalleryItem(this.title, this.subtitle, this.image);
+}
+
 class LetsBowlHomeScreen extends StatefulWidget {
   const LetsBowlHomeScreen({super.key});
 
@@ -78,125 +110,89 @@ class LetsBowlHomeScreen extends StatefulWidget {
   State<LetsBowlHomeScreen> createState() => _LetsBowlHomeScreenState();
 }
 
-class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen>
-    with SingleTickerProviderStateMixin {
+class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen> {
   final ScrollController _scrollController = ScrollController();
-  final PageController _galleryController = PageController(
-    viewportFraction: 0.82,
-  );
-  final PageController _reviewController = PageController(
-    viewportFraction: 0.9,
-  );
+  final PageController _galleryController = PageController(viewportFraction: .88);
+  final PageController _gamesController = PageController(viewportFraction: .72);
+  final PageController _reviewController = PageController(viewportFraction: .90);
 
   Timer? _galleryTimer;
+  Timer? _gamesTimer;
   Timer? _reviewTimer;
-  int _galleryIndex = 0;
-  int _reviewIndex = 0;
-  late final AnimationController _bgController;
 
-  final GlobalKey _heroKey = GlobalKey();
+  int _galleryIndex = 0;
+  int _gamesIndex = 0;
+  int _reviewIndex = 0;
+
   final GlobalKey _offersKey = GlobalKey();
   final GlobalKey _aboutKey = GlobalKey();
+  final GlobalKey _gamesKey = GlobalKey();
   final GlobalKey _galleryKey = GlobalKey();
   final GlobalKey _reviewsKey = GlobalKey();
   final GlobalKey _footerKey = GlobalKey();
 
+  static const String heroVideoUrl = 'https://gobus.space/bowling.mp4';
+
   static const List<ActivityItem> activities = [
-    ActivityItem('01', 'Bowling', Icons.sports_handball_rounded),
-    ActivityItem('02', 'Snooker', Icons.sports_bar_rounded),
-    ActivityItem('03', 'Arcade', Icons.videogame_asset_rounded),
-    ActivityItem('04', 'Machine Cricket', Icons.sports_cricket_rounded),
-    ActivityItem('05', 'Badminton', Icons.sports_tennis_rounded),
-    ActivityItem('06', 'PickleBall', Icons.sports_baseball_rounded),
-    ActivityItem('07', 'Table Tennis', Icons.sports_tennis_rounded),
-    ActivityItem('08', 'Party Hall', Icons.celebration_rounded),
-    ActivityItem('09', 'Chill-Pill Games', Icons.extension_rounded),
-    ActivityItem('10', 'Cafe', Icons.local_cafe_rounded),
+    ActivityItem('Bowling', Icons.sports_handball_rounded, 'Signature lanes'),
+    ActivityItem('Snooker', Icons.sports_bar_rounded, 'Cue & chill'),
+    ActivityItem('Arcade', Icons.videogame_asset_rounded, 'Level up nights'),
+    ActivityItem('Machine Cricket', Icons.sports_cricket_rounded, 'Fast challenge'),
+    ActivityItem('Badminton', Icons.sports_tennis_rounded, 'Energetic rallies'),
+    ActivityItem('PickleBall', Icons.sports_baseball_rounded, 'Trendy courts'),
+    ActivityItem('Table Tennis', Icons.table_bar_rounded, 'Quick matches'),
+    ActivityItem('Party Hall', Icons.celebration_rounded, 'Events & birthdays'),
+    ActivityItem('Chill-Pill Games', Icons.extension_rounded, 'Casual fun'),
+    ActivityItem('Cafe', Icons.local_cafe_rounded, 'Food & drinks'),
   ];
 
   static const List<OfferItem> offers = [
     OfferItem('Limited Time', '50% OFF', 'Weekday bowling before 4 PM'),
     OfferItem('Weekend Special', 'Family Pack', '4 games + snacks for ₹999'),
-    OfferItem(
-      'Daily Deal',
-      'Happy Hours',
-      'Buy 2 Get 1 Free on arcade tokens',
-    ),
+    OfferItem('Daily Deal', 'Happy Hours', 'Buy 2 Get 1 Free on arcade tokens'),
     OfferItem('All Week', 'Student Deal', '30% off with valid student ID'),
-    OfferItem(
-      'Book Ahead',
-      'Birthday Bash',
-      'Free lane + cake for birthday groups',
-    ),
+    OfferItem('Book Ahead', 'Birthday Bash', 'Free lane + cake for birthday groups'),
     OfferItem('Groups 10+', 'Corporate', 'Team packages from ₹5999'),
   ];
 
   static const List<ReviewItem> reviews = [
-    ReviewItem(
-      initials: 'AK',
-      name: 'Aravind Kalyan',
-      meta: 'Local Guide • a month ago',
-      text:
-          'Had a very great time at Let\'s Bowl, Thoraipakkam. Bowling alley, party space, VR arena and cafe under one roof.',
-    ),
-    ReviewItem(
-      initials: 'MA',
-      name: 'Mohammed Affrudin',
-      meta: 'Local Guide • 2 months ago',
-      text:
-          'Awesome time at the bowling cafe. The lanes were smooth, well-maintained, and some of the best I\'ve played on.',
-    ),
-    ReviewItem(
-      initials: 'RR',
-      name: 'Rahul R',
-      meta: 'Local Guide • recently',
-      text:
-          'A good place to try something different from regular indoor games. Bowling was fun and beginner friendly.',
-    ),
-    ReviewItem(
-      initials: 'JM',
-      name: 'James M',
-      meta: 'recently',
-      text:
-          'Very good place for team fun activities. The VR roller coaster and zombie game were realistic and thrilling.',
-    ),
-    ReviewItem(
-      initials: 'AS',
-      name: 'ameen shamshir',
-      meta: 'Local Guide • recently',
-      text:
-          'Fun-filled experience with a great atmosphere. Perfect for group games and outings. Helpful staff too.',
-    ),
+    ReviewItem('AK', 'Aravind Kalyan', 'Local Guide • a month ago', 'Had a very great time at Let\'s Bowl, Thoraipakkam. Bowling alley, party space, VR arena and cafe under one roof.'),
+    ReviewItem('MA', 'Mohammed Affrudin', 'Local Guide • 2 months ago', 'Awesome time at the bowling cafe. The lanes were smooth, well-maintained, and some of the best I\'ve played on.'),
+    ReviewItem('RR', 'Rahul R', 'Local Guide • recently', 'A good place to try something different from regular indoor games. Bowling was fun and beginner friendly.'),
+    ReviewItem('JM', 'James M', 'recently', 'Very good place for team fun activities. The VR roller coaster and zombie game were very realistic and thrilling.'),
+    ReviewItem('AS', 'ameen shamshir', 'Local Guide • recently', 'Fun-filled experience with a great atmosphere. Perfect for group games and outings. Helpful staff too.'),
   ];
 
   static const List<GalleryItem> galleryItems = [
-    GalleryItem('Bowling Lanes', Icons.sports_handball_rounded),
-    GalleryItem('Arcade Zone', Icons.videogame_asset_rounded),
-    GalleryItem('Snooker Tables', Icons.sports_bar_rounded),
-    GalleryItem('Machine Cricket', Icons.sports_cricket_rounded),
-    GalleryItem('Party Hall', Icons.celebration_rounded),
-    GalleryItem('Cafe', Icons.local_cafe_rounded),
-    GalleryItem('Group Fun', Icons.groups_rounded),
-    GalleryItem('Family Time', Icons.favorite_rounded),
+    GalleryItem('Bowling Vibes', 'Dummy venue image', 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?auto=format&fit=crop&w=1200&q=80'),
+    GalleryItem('Arcade Energy', 'Dummy fun zone image', 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80'),
+    GalleryItem('Restaurant Mood', 'Dummy dining image', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1200&q=80'),
+    GalleryItem('Team Hangout', 'Dummy group image', 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _bgController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 18),
-    )..repeat();
-    _startAutoScroll();
+    _startAutoSlides();
   }
 
-  void _startAutoScroll() {
+  void _startAutoSlides() {
     _galleryTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (!_galleryController.hasClients) return;
       _galleryIndex = (_galleryIndex + 1) % galleryItems.length;
       _galleryController.animateToPage(
         _galleryIndex,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 550),
+        curve: Curves.easeInOut,
+      );
+    });
+
+    _gamesTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!_gamesController.hasClients) return;
+      _gamesIndex = (_gamesIndex + 1) % activities.length;
+      _gamesController.animateToPage(
+        _gamesIndex,
+        duration: const Duration(milliseconds: 550),
         curve: Curves.easeInOut,
       );
     });
@@ -206,7 +202,7 @@ class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen>
       _reviewIndex = (_reviewIndex + 1) % reviews.length;
       _reviewController.animateToPage(
         _reviewIndex,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 550),
         curve: Curves.easeInOut,
       );
     });
@@ -216,19 +212,20 @@ class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen>
   void dispose() {
     _scrollController.dispose();
     _galleryController.dispose();
+    _gamesController.dispose();
     _reviewController.dispose();
     _galleryTimer?.cancel();
+    _gamesTimer?.cancel();
     _reviewTimer?.cancel();
-    _bgController.dispose();
     super.dispose();
   }
 
   Future<void> _open(Uri uri) async {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not open ${uri.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open ${uri.toString()}')),
+      );
     }
   }
 
@@ -246,183 +243,130 @@ class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: _AppDrawer(
-        onPartyTap: () => _scrollTo(_offersKey),
-        onTournamentsTap: () => _scrollTo(_reviewsKey),
-        onBulkBookingTap: () => _open(LetsBowlLinks.bulkBooking),
+        onOffersTap: () => _scrollTo(_offersKey),
         onAboutTap: () => _scrollTo(_aboutKey),
+        onGamesTap: () => _scrollTo(_gamesKey),
+        onGalleryTap: () => _scrollTo(_galleryKey),
+        onReviewsTap: () => _scrollTo(_reviewsKey),
         onQuickLinksTap: () => _scrollTo(_footerKey),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: LetsBowlAnimatedBackground(controller: _bgController),
-            ),
-          ),
-          CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                pinned: true,
-                backgroundColor: LetsBowlTheme.black,
-                toolbarHeight: 74,
-                leading: Builder(
-                  builder: (context) => IconButton(
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                    icon: const Icon(
-                      Icons.menu_rounded,
-                      color: LetsBowlTheme.gold,
-                    ),
-                  ),
-                ),
-                title: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'LetsBowl',
-                      style: TextStyle(
-                        color: LetsBowlTheme.pureWhite,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Strike. Sip. Celebrate.',
-                      style: TextStyle(
-                        color: LetsBowlTheme.gold,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-                centerTitle: true,
-                actions: [
-                  IconButton(
-                    onPressed: () => _open(LetsBowlLinks.callPrimary),
-                    icon: const Icon(
-                      Icons.call_rounded,
-                      color: LetsBowlTheme.red,
-                    ),
-                  ),
-                ],
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            toolbarHeight: 74,
+            backgroundColor: LetsBowlTheme.black.withOpacity(.84),
+            leading: Builder(
+              builder: (context) => IconButton(
+                onPressed: () => Scaffold.of(context).openDrawer(),
+                icon: const Icon(Icons.menu_rounded, color: LetsBowlTheme.gold),
               ),
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
-                    _SocialStrip(
-                      onFacebookTap: () => _open(LetsBowlLinks.facebook),
-                      onInstagramTap: () => _open(LetsBowlLinks.instagram),
-                      onYoutubeTap: () => _open(LetsBowlLinks.youtube),
-                    ),
-                    const SizedBox(height: 10),
-                    _TopContactCard(
-                      onCallTap: () => _open(LetsBowlLinks.callPrimary),
-                      onWhatsAppTap: () => _open(LetsBowlLinks.whatsapp),
-                      onBulkBookingTap: () => _open(LetsBowlLinks.bulkBooking),
-                      onPartyTap: () => _scrollTo(_offersKey),
-                      onTournamentTap: () => _scrollTo(_reviewsKey),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      key: _heroKey,
-                      child: _HeroSection(
-                        onBookNowTap: () => _open(LetsBowlLinks.reserveSlot),
-                        onExploreTap: () => _scrollTo(_aboutKey),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const _SectionHeader(
-                      eyebrow: 'What We Offer',
-                      title: '10 ways to have fun under one roof',
-                      subtitle:
-                          'Home screen rebuilt from the LetsBowl site with a white, red, gold and black premium mobile theme.',
-                    ),
-                    const SizedBox(height: 16),
-                    _ActivitiesGrid(
-                      items: activities,
-                      onItemTap: (item) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('${item.title} tapped')));
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    const _TickerBand(),
-                    const SizedBox(height: 24),
-                    Container(
-                      key: _offersKey,
-                      child: const _SectionHeader(
-                        eyebrow: 'Live Offers',
-                        title: 'Grab these deals before they\'re gone',
-                        subtitle:
-                            'Offer cards, swipe behavior and action buttons based on the website\'s promotions section.',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _OffersCarousel(
-                      items: offers,
-                      onClaimTap: () => _open(LetsBowlLinks.whatsapp),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(key: _aboutKey, child: const _AboutSection()),
-                    const SizedBox(height: 24),
-                    Container(
-                      key: _galleryKey,
-                      child: _GallerySection(
-                        controller: _galleryController,
-                        items: galleryItems,
-                        onViewGalleryTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Open full gallery screen here'),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      key: _reviewsKey,
-                      child: const _SectionHeader(
-                        eyebrow: 'What People Say',
-                        title: '4.7 on Google Maps',
-                        subtitle:
-                            'Auto-sliding review cards inspired by the live review section on the website.',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _ReviewsSection(
-                      controller: _reviewController,
-                      items: reviews,
-                    ),
-                    const SizedBox(height: 24),
-                    _FinalCta(onTap: () => _open(LetsBowlLinks.reserveSlot)),
-                    const SizedBox(height: 24),
-                    Container(
-                      key: _footerKey,
-                      child: _FooterSection(
-                        onCallTap: () => _open(LetsBowlLinks.callPrimary),
-                        onWhatsAppTap: () => _open(LetsBowlLinks.whatsapp),
-                        onEmailTap: () => _open(LetsBowlLinks.email),
-                        onMapsTap: () => _open(LetsBowlLinks.maps),
-                        onFacebookTap: () => _open(LetsBowlLinks.facebook),
-                        onInstagramTap: () => _open(LetsBowlLinks.instagram),
-                        onYoutubeTap: () => _open(LetsBowlLinks.youtube),
-                        onBulkBookingTap: () => _open(LetsBowlLinks.bulkBooking),
-                        onPartyTap: () => _scrollTo(_offersKey),
-                        onTournamentsTap: () => _scrollTo(_reviewsKey),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                  ],
+            ),
+            title: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'LetsBowl',
+                  style: TextStyle(
+                    color: LetsBowlTheme.pureWhite,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 22,
+                  ),
                 ),
+                SizedBox(height: 2),
+                Text(
+                  'Strike. Sip. Celebrate.',
+                  style: TextStyle(
+                    color: LetsBowlTheme.gold,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                onPressed: () => _open(LetsBowlLinks.callPrimary),
+                icon: const Icon(Icons.call_rounded, color: LetsBowlTheme.red),
               ),
             ],
+          ),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _HeroSection(
+                  videoUrl: heroVideoUrl,
+                  onCallTap: () => _open(LetsBowlLinks.callPrimary),
+                  onWhatsAppTap: () => _open(LetsBowlLinks.whatsapp),
+                  onBookTap: () => _open(LetsBowlLinks.reserveSlot),
+                  onExploreTap: () => _scrollTo(_gamesKey),
+                  onBulkTap: () => _open(LetsBowlLinks.bulkBooking),
+                ),
+                const SizedBox(height: 28),
+                const _SectionHeader(
+                  eyebrow: 'What We Offer',
+                  title: '10 ways to have fun under one roof',
+                  subtitle: 'Bowling, snooker, arcade, machine cricket, badminton, pickleball, table tennis, party hall, chill games and cafe experiences — all designed in a fresh premium layout.',
+                ),
+                const SizedBox(height: 16),
+                Container(key: _gamesKey, child: _GamesSlider(controller: _gamesController, items: activities)),
+                const SizedBox(height: 18),
+                const _RunningStrip(),
+                const SizedBox(height: 28),
+                Container(
+                  key: _offersKey,
+                  child: const _SectionHeader(
+                    eyebrow: 'Live Offers',
+                    title: 'Grab these deals before they\'re gone',
+                    subtitle: 'Professional card design rebuilt from scratch using only the offer content.',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _OffersSection(items: offers, onClaimTap: () => _open(LetsBowlLinks.whatsapp)),
+                const SizedBox(height: 28),
+                Container(
+                  key: _aboutKey,
+                  child: const _AboutBlock(),
+                ),
+                const SizedBox(height: 28),
+                Container(
+                  key: _galleryKey,
+                  child: _GallerySection(controller: _galleryController, items: galleryItems),
+                ),
+                const SizedBox(height: 28),
+                Container(
+                  key: _reviewsKey,
+                  child: const _SectionHeader(
+                    eyebrow: 'What People Say',
+                    title: '4.7 on Google Maps',
+                    subtitle: 'A premium review carousel designed independently with the review content carried over.',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _ReviewCarousel(controller: _reviewController, items: reviews),
+                const SizedBox(height: 28),
+                _CtaBanner(onTap: () => _open(LetsBowlLinks.reserveSlot)),
+                const SizedBox(height: 28),
+                Container(
+                  key: _footerKey,
+                  child: _FooterSection(
+                    onCallTap: () => _open(LetsBowlLinks.callPrimary),
+                    onWhatsAppTap: () => _open(LetsBowlLinks.whatsapp),
+                    onEmailTap: () => _open(LetsBowlLinks.email),
+                    onMapTap: () => _open(LetsBowlLinks.maps),
+                    onInstagramTap: () => _open(LetsBowlLinks.instagram),
+                    onFacebookTap: () => _open(LetsBowlLinks.facebook),
+                    onYoutubeTap: () => _open(LetsBowlLinks.youtube),
+                    onBulkTap: () => _open(LetsBowlLinks.bulkBooking),
+                  ),
+                ),
+                const SizedBox(height: 28),
+              ],
+            ),
           ),
         ],
       ),
@@ -430,23 +374,17 @@ class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           FloatingActionButton.small(
-            heroTag: 'whatsapp',
+            heroTag: 'wa',
             backgroundColor: LetsBowlTheme.gold,
             onPressed: () => _open(LetsBowlLinks.whatsapp),
-            child: const Icon(
-              Icons.chat_rounded,
-              color: LetsBowlTheme.black,
-            ),
+            child: const Icon(Icons.chat_rounded, color: LetsBowlTheme.black),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             heroTag: 'call',
             backgroundColor: LetsBowlTheme.red,
             onPressed: () => _open(LetsBowlLinks.callPrimary),
-            child: const Icon(
-              Icons.call_rounded,
-              color: LetsBowlTheme.pureWhite,
-            ),
+            child: const Icon(Icons.call_rounded, color: LetsBowlTheme.pureWhite),
           ),
         ],
       ),
@@ -454,62 +392,27 @@ class _LetsBowlHomeScreenState extends State<LetsBowlHomeScreen>
   }
 }
 
-class ActivityItem {
-  final String index;
-  final String title;
-  final IconData icon;
-
-  const ActivityItem(this.index, this.title, this.icon);
-}
-
-class OfferItem {
-  final String tag;
-  final String title;
-  final String desc;
-
-  const OfferItem(this.tag, this.title, this.desc);
-}
-
-class ReviewItem {
-  final String initials;
-  final String name;
-  final String meta;
-  final String text;
-
-  const ReviewItem({
-    required this.initials,
-    required this.name,
-    required this.meta,
-    required this.text,
-  });
-}
-
-class GalleryItem {
-  final String title;
-  final IconData icon;
-
-  const GalleryItem(this.title, this.icon);
-}
-
 class _AppDrawer extends StatelessWidget {
   const _AppDrawer({
-    required this.onPartyTap,
-    required this.onTournamentsTap,
-    required this.onBulkBookingTap,
+    required this.onOffersTap,
     required this.onAboutTap,
+    required this.onGamesTap,
+    required this.onGalleryTap,
+    required this.onReviewsTap,
     required this.onQuickLinksTap,
   });
 
-  final VoidCallback onPartyTap;
-  final VoidCallback onTournamentsTap;
-  final VoidCallback onBulkBookingTap;
+  final VoidCallback onOffersTap;
   final VoidCallback onAboutTap;
+  final VoidCallback onGamesTap;
+  final VoidCallback onGalleryTap;
+  final VoidCallback onReviewsTap;
   final VoidCallback onQuickLinksTap;
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: LetsBowlTheme.softBlack,
+      backgroundColor: LetsBowlTheme.surface,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -520,44 +423,22 @@ class _AppDrawer extends StatelessWidget {
                 'LetsBowl',
                 style: TextStyle(
                   color: LetsBowlTheme.pureWhite,
-                  fontSize: 24,
+                  fontSize: 26,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 4),
               const Text(
                 'Chennai\'s Strike Zone',
-                style: TextStyle(
-                  color: LetsBowlTheme.gold,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 24),
-              _DrawerTile(
-                icon: Icons.celebration_rounded,
-                text: 'Party',
-                onTap: onPartyTap,
-              ),
-              _DrawerTile(
-                icon: Icons.emoji_events_rounded,
-                text: 'Tournaments',
-                onTap: onTournamentsTap,
-              ),
-              _DrawerTile(
-                icon: Icons.groups_rounded,
-                text: 'Bulk Booking',
-                onTap: onBulkBookingTap,
-              ),
-              _DrawerTile(
-                icon: Icons.info_outline_rounded,
-                text: 'About',
-                onTap: onAboutTap,
-              ),
-              _DrawerTile(
-                icon: Icons.link_rounded,
-                text: 'Quick Links',
-                onTap: onQuickLinksTap,
-              ),
+              _DrawerTile(icon: Icons.local_offer_rounded, text: 'Offers', onTap: onOffersTap),
+              _DrawerTile(icon: Icons.sports_esports_rounded, text: 'Games', onTap: onGamesTap),
+              _DrawerTile(icon: Icons.info_outline_rounded, text: 'About', onTap: onAboutTap),
+              _DrawerTile(icon: Icons.photo_library_rounded, text: 'Gallery', onTap: onGalleryTap),
+              _DrawerTile(icon: Icons.star_rounded, text: 'Reviews', onTap: onReviewsTap),
+              _DrawerTile(icon: Icons.link_rounded, text: 'Quick Links', onTap: onQuickLinksTap),
             ],
           ),
         ),
@@ -567,11 +448,7 @@ class _AppDrawer extends StatelessWidget {
 }
 
 class _DrawerTile extends StatelessWidget {
-  const _DrawerTile({
-    required this.icon,
-    required this.text,
-    required this.onTap,
-  });
+  const _DrawerTile({required this.icon, required this.text, required this.onTap});
 
   final IconData icon;
   final String text;
@@ -582,9 +459,9 @@ class _DrawerTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: LetsBowlTheme.cardBlack,
+        color: LetsBowlTheme.softBlack,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withOpacity(.08)),
       ),
       child: ListTile(
         onTap: () {
@@ -592,220 +469,8 @@ class _DrawerTile extends StatelessWidget {
           onTap();
         },
         leading: Icon(icon, color: LetsBowlTheme.gold),
-        title: Text(
-          text,
-          style: const TextStyle(
-            color: LetsBowlTheme.pureWhite,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        trailing: const Icon(
-          Icons.chevron_right_rounded,
-          color: LetsBowlTheme.red,
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialStrip extends StatelessWidget {
-  const _SocialStrip({
-    required this.onFacebookTap,
-    required this.onInstagramTap,
-    required this.onYoutubeTap,
-  });
-
-  final VoidCallback onFacebookTap;
-  final VoidCallback onInstagramTap;
-  final VoidCallback onYoutubeTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          const Text(
-            'follow us on:',
-            style: TextStyle(color: LetsBowlTheme.muted, fontSize: 12),
-          ),
-          const Spacer(),
-          _CircleIcon(icon: Icons.facebook_rounded, onTap: onFacebookTap),
-          const SizedBox(width: 8),
-          _CircleIcon(icon: Icons.camera_alt_rounded, onTap: onInstagramTap),
-          const SizedBox(width: 8),
-          _CircleIcon(icon: Icons.play_arrow_rounded, onTap: onYoutubeTap),
-        ],
-      ),
-    );
-  }
-}
-
-class _CircleIcon extends StatelessWidget {
-  const _CircleIcon({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(99),
-      onTap: onTap,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: LetsBowlTheme.softBlack,
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: Icon(icon, color: LetsBowlTheme.gold, size: 18),
-      ),
-    );
-  }
-}
-
-class _TopContactCard extends StatelessWidget {
-  const _TopContactCard({
-    required this.onCallTap,
-    required this.onWhatsAppTap,
-    required this.onBulkBookingTap,
-    required this.onPartyTap,
-    required this.onTournamentTap,
-  });
-
-  final VoidCallback onCallTap;
-  final VoidCallback onWhatsAppTap;
-  final VoidCallback onBulkBookingTap;
-  final VoidCallback onPartyTap;
-  final VoidCallback onTournamentTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: LetsBowlTheme.softBlack,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: LetsBowlTheme.gold.withOpacity(0.14)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.circle, size: 10, color: Colors.greenAccent),
-              SizedBox(width: 8),
-              Text(
-                'Open Now!',
-                style: TextStyle(
-                  color: LetsBowlTheme.gold,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Spacer(),
-              Text(
-                'Until 11:00 PM',
-                style: TextStyle(
-                  color: LetsBowlTheme.pureWhite,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'letsbowl.97@gmail.com  •  +91 85087 00000',
-            style: TextStyle(
-              color: LetsBowlTheme.muted,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _QuickChip(
-                label: 'Bulk Booking',
-                onTap: onBulkBookingTap,
-                color: LetsBowlTheme.gold,
-                textColor: LetsBowlTheme.black,
-              ),
-              _QuickChip(
-                label: 'Party',
-                onTap: onPartyTap,
-                color: LetsBowlTheme.cardBlack,
-                textColor: LetsBowlTheme.pureWhite,
-              ),
-              _QuickChip(
-                label: 'Tournaments',
-                onTap: onTournamentTap,
-                color: LetsBowlTheme.cardBlack,
-                textColor: LetsBowlTheme.pureWhite,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _PillButton(
-                  text: 'Call Now',
-                  bgColor: LetsBowlTheme.red,
-                  textColor: LetsBowlTheme.pureWhite,
-                  onTap: onCallTap,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _PillButton(
-                  text: 'WhatsApp',
-                  bgColor: LetsBowlTheme.gold,
-                  textColor: LetsBowlTheme.black,
-                  onTap: onWhatsAppTap,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({
-    required this.label,
-    required this.onTap,
-    required this.color,
-    required this.textColor,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-  final Color color;
-  final Color textColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
-        ),
+        title: Text(text, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w800)),
+        trailing: const Icon(Icons.chevron_right_rounded, color: LetsBowlTheme.red),
       ),
     );
   }
@@ -813,172 +478,377 @@ class _QuickChip extends StatelessWidget {
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
-    required this.onBookNowTap,
+    required this.videoUrl,
+    required this.onCallTap,
+    required this.onWhatsAppTap,
+    required this.onBookTap,
     required this.onExploreTap,
+    required this.onBulkTap,
   });
 
-  final VoidCallback onBookNowTap;
+  final String videoUrl;
+  final VoidCallback onCallTap;
+  final VoidCallback onWhatsAppTap;
+  final VoidCallback onBookTap;
   final VoidCallback onExploreTap;
+  final VoidCallback onBulkTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 430,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(22),
+      height: 690,
+      margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF1A1A1A), LetsBowlTheme.darkRed, LetsBowlTheme.black],
-        ),
+        borderRadius: BorderRadius.circular(32),
+        color: LetsBowlTheme.black,
+        boxShadow: [
+          BoxShadow(
+            color: LetsBowlTheme.red.withOpacity(.10),
+            blurRadius: 24,
+            offset: const Offset(0, 16),
+          ),
+        ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -16,
-            top: 0,
-            child: Container(
-              width: 190,
-              height: 190,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _HeroVideoBackground(videoUrl),
+            Container(
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                   colors: [
-                    LetsBowlTheme.gold.withOpacity(0.66),
-                    LetsBowlTheme.gold.withOpacity(0.03),
+                    Colors.black.withOpacity(.18),
+                    Colors.black.withOpacity(.38),
+                    LetsBowlTheme.black.withOpacity(.92),
                   ],
                 ),
               ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
+            Positioned(
+              left: -60,
+              top: -40,
+              child: Container(
+                width: 180,
+                height: 180,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.white.withOpacity(0.12)),
-                ),
-                child: const Text(
-                  'Premium Entertainment Destination',
-                  style: TextStyle(
-                    color: LetsBowlTheme.gold,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
+                  shape: BoxShape.circle,
+                  color: LetsBowlTheme.gold.withOpacity(.12),
                 ),
               ),
-              const Spacer(),
-              const Text(
-                'CHENNAI\'S\nSTRIKE ZONE',
-                style: TextStyle(
-                  color: LetsBowlTheme.pureWhite,
-                  fontSize: 38,
-                  height: 1.04,
-                  fontWeight: FontWeight.w900,
+            ),
+            Positioned(
+              right: -50,
+              bottom: 120,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: LetsBowlTheme.red.withOpacity(.10),
                 ),
               ),
-              const SizedBox(height: 14),
-              const Text(
-                'Premium bowling, arcade, snooker & more. Your ultimate entertainment destination in the heart of Chennai.',
-                style: TextStyle(
-                  color: LetsBowlTheme.white,
-                  fontSize: 15,
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _PillButton(
-                      text: 'Book Now',
-                      bgColor: LetsBowlTheme.red,
-                      textColor: LetsBowlTheme.pureWhite,
-                      onTap: onBookNowTap,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _PillButton(
-                      text: 'Explore',
-                      bgColor: LetsBowlTheme.pureWhite,
-                      textColor: LetsBowlTheme.black,
-                      onTap: onExploreTap,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 26),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        'Scroll',
-                        style: TextStyle(
-                          color: LetsBowlTheme.gold,
-                          fontWeight: FontWeight.w800,
+                      _GlassChip(label: 'Open Now!', icon: Icons.circle, iconColor: Colors.greenAccent.shade400),
+                      const SizedBox(width: 8),
+                      _GlassChip(label: 'Until 11:00 PM', icon: Icons.access_time_rounded),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TopActionCard(
+                          title: 'Call Now',
+                          subtitle: '+91 85087 00000',
+                          icon: Icons.call_rounded,
+                          onTap: onCallTap,
                         ),
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'to discover',
-                        style: TextStyle(
-                          color: LetsBowlTheme.muted,
-                          fontSize: 12,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _TopActionCard(
+                          title: 'WhatsApp',
+                          subtitle: 'Fast booking help',
+                          icon: Icons.chat_rounded,
+                          onTap: onWhatsAppTap,
                         ),
                       ),
                     ],
                   ),
+                  const Spacer(),
+                  const Text(
+                    'CHENNAI\'S\nSTRIKE ZONE',
+                    style: TextStyle(
+                      color: LetsBowlTheme.pureWhite,
+                      fontSize: 40,
+                      height: 1.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Premium bowling, arcade, snooker & more. Your ultimate entertainment destination in the heart of Chennai.',
+                    style: TextStyle(
+                      color: LetsBowlTheme.white,
+                      fontSize: 15.5,
+                      height: 1.55,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   Row(
-                    children: List.generate(
-                      3,
-                      (index) => Transform.translate(
-                        offset: Offset(index == 0 ? 0 : -10.0 * index, 0),
+                    children: [
+                      Expanded(
+                        child: _PrimaryButton(
+                          text: 'Reserve Your Slot',
+                          background: LetsBowlTheme.red,
+                          foreground: LetsBowlTheme.pureWhite,
+                          onTap: onBookTap,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _PrimaryButton(
+                          text: 'Explore Games',
+                          background: LetsBowlTheme.gold,
+                          foreground: LetsBowlTheme.black,
+                          onTap: onExploreTap,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
                         child: Container(
-                          width: 34 + (index * 7),
-                          height: 34 + (index * 7),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                LetsBowlTheme.pureWhite,
-                                LetsBowlTheme.gold,
-                                LetsBowlTheme.deepGold,
-                              ],
-                            ),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withOpacity(.10)),
+                          ),
+                          child: const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Bulk Booking', style: TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w800)),
+                              SizedBox(height: 4),
+                              Text('Party, groups & events', style: TextStyle(color: LetsBowlTheme.white)),
+                            ],
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 84,
+                        child: _PrimaryButton(
+                          text: 'Go',
+                          background: LetsBowlTheme.pureWhite,
+                          foreground: LetsBowlTheme.black,
+                          onTap: onBulkTap,
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+                  const _HeroStats(),
                 ],
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroVideoBackground extends StatefulWidget {
+  const _HeroVideoBackground(this.videoUrl);
+
+  final String videoUrl;
+
+  @override
+  State<_HeroVideoBackground> createState() => _HeroVideoBackgroundState();
+}
+
+class _HeroVideoBackgroundState extends State<_HeroVideoBackground> {
+  VideoPlayerController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+      ..setLooping(true)
+      ..setVolume(0)
+      ..initialize().then((_) {
+        if (!mounted) return;
+        _controller?.play();
+        setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2B1518), Color(0xFF13161B), Color(0xFF4A3A12)],
           ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: LetsBowlTheme.gold),
+        ),
+      );
+    }
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: controller.value.size.width,
+        height: controller.value.size.height,
+        child: VideoPlayer(controller),
+      ),
+    );
+  }
+}
+
+class _GlassChip extends StatelessWidget {
+  const _GlassChip({required this.label, required this.icon, this.iconColor});
+
+  final String label;
+  final IconData icon;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: iconColor ?? LetsBowlTheme.gold),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 }
 
+class _TopActionCard extends StatelessWidget {
+  const _TopActionCard({required this.title, required this.subtitle, required this.icon, required this.onTap});
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(.10)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: LetsBowlTheme.red.withOpacity(.92),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: LetsBowlTheme.pureWhite),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(color: LetsBowlTheme.muted, fontSize: 12.5)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStats extends StatelessWidget {
+  const _HeroStats();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget buildStat(String value, String label) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(.07),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(.08)),
+          ),
+          child: Column(
+            children: [
+              Text(value, style: const TextStyle(color: LetsBowlTheme.gold, fontSize: 20, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 4),
+              Text(label, style: const TextStyle(color: LetsBowlTheme.white, fontSize: 12.5)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        buildStat('10', 'Experiences'),
+        const SizedBox(width: 10),
+        buildStat('4.7', 'Google Rating'),
+        const SizedBox(width: 10),
+        buildStat('11 PM', 'Open Daily'),
+      ],
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.eyebrow,
-    required this.title,
-    required this.subtitle,
-  });
+  const _SectionHeader({required this.eyebrow, required this.title, required this.subtitle});
 
   final String eyebrow;
   final String title;
@@ -993,111 +863,89 @@ class _SectionHeader extends StatelessWidget {
         children: [
           Text(
             eyebrow.toUpperCase(),
-            style: const TextStyle(
-              color: LetsBowlTheme.gold,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.1,
-            ),
+            style: const TextStyle(color: LetsBowlTheme.gold, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.1),
           ),
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
-              color: LetsBowlTheme.pureWhite,
-              fontSize: 25,
-              height: 1.15,
-              fontWeight: FontWeight.w900,
-            ),
+            style: const TextStyle(color: LetsBowlTheme.pureWhite, fontSize: 28, height: 1.1, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: LetsBowlTheme.muted,
-              fontSize: 14,
-              height: 1.45,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(subtitle, style: const TextStyle(color: LetsBowlTheme.muted, fontSize: 14.5, height: 1.5)),
         ],
       ),
     );
   }
 }
 
-class _ActivitiesGrid extends StatelessWidget {
-  const _ActivitiesGrid({required this.items, required this.onItemTap});
+class _GamesSlider extends StatelessWidget {
+  const _GamesSlider({required this.controller, required this.items});
 
+  final PageController controller;
   final List<ActivityItem> items;
-  final ValueChanged<ActivityItem> onItemTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
+    return SizedBox(
+      height: 235,
+      child: PageView.builder(
+        controller: controller,
         itemCount: items.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          mainAxisExtent: 155,
-        ),
         itemBuilder: (context, index) {
           final item = items[index];
-          return InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: () => onItemTap(item),
+          return Padding(
+            padding: const EdgeInsets.only(left: 16, right: 8),
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: LetsBowlTheme.softBlack,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.white.withOpacity(0.07)),
+                borderRadius: BorderRadius.circular(28),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF251316), Color(0xFF171A20), Color(0xFF3A2E10)],
+                ),
+                border: Border.all(color: Colors.white.withOpacity(.08)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        item.index,
-                        style: const TextStyle(
-                          color: LetsBowlTheme.gold,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(item.icon, color: LetsBowlTheme.red),
-                    ],
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: LetsBowlTheme.pureWhite,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(item.icon, color: LetsBowlTheme.red, size: 30),
                   ),
                   const Spacer(),
-                  Text(
-                    item.title,
-                    style: const TextStyle(
-                      color: LetsBowlTheme.pureWhite,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Row(
+                  Text(item.tag, style: const TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text(item.title, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontSize: 26, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Text(
-                        'Book Now',
-                        style: TextStyle(
-                          color: LetsBowlTheme.red,
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: LetsBowlTheme.red,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Center(
+                            child: Text('Book Now', style: TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w800)),
+                          ),
                         ),
                       ),
-                      SizedBox(width: 2),
-                      Icon(
-                        Icons.arrow_right_alt_rounded,
-                        color: LetsBowlTheme.red,
+                      const SizedBox(width: 10),
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: LetsBowlTheme.gold,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Icon(Icons.arrow_forward_rounded, color: LetsBowlTheme.black),
                       ),
                     ],
                   ),
@@ -1111,33 +959,32 @@ class _ActivitiesGrid extends StatelessWidget {
   }
 }
 
-class _TickerBand extends StatelessWidget {
-  const _TickerBand();
+class _RunningStrip extends StatelessWidget {
+  const _RunningStrip();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      color: LetsBowlTheme.red,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      child: const Text(
-        'EAT • PLAY • BOWL • REPEAT • EAT • PLAY • BOWL • REPEAT • EAT • PLAY • BOWL • REPEAT • EAT • PLAY • BOWL • REPEAT',
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.fade,
-        softWrap: false,
-        style: TextStyle(
-          color: LetsBowlTheme.pureWhite,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.4,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: LetsBowlTheme.red,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: NeverScrollableScrollPhysics(),
+        child: Text(
+          'EAT • PLAY • BOWL • REPEAT • EAT • PLAY • BOWL • REPEAT • EAT • PLAY • BOWL • REPEAT',
+          style: TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w900, letterSpacing: .4),
         ),
       ),
     );
   }
 }
 
-class _OffersCarousel extends StatelessWidget {
-  const _OffersCarousel({required this.items, required this.onClaimTap});
+class _OffersSection extends StatelessWidget {
+  const _OffersSection({required this.items, required this.onClaimTap});
 
   final List<OfferItem> items;
   final VoidCallback onClaimTap;
@@ -1145,57 +992,38 @@ class _OffersCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 210,
+      height: 220,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, index) {
           final item = items[index];
           return Container(
-            width: 260,
+            width: 270,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: LetsBowlTheme.pureWhite,
-              borderRadius: BorderRadius.circular(24),
+              color: LetsBowlTheme.white,
+              borderRadius: BorderRadius.circular(28),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.tag,
-                  style: const TextStyle(
-                    color: LetsBowlTheme.deepGold,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: LetsBowlTheme.gold.withOpacity(.18),
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    color: LetsBowlTheme.black,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 25,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  item.desc,
-                  style: const TextStyle(
-                    color: LetsBowlTheme.cardBlack,
-                    height: 1.4,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  child: Text(item.label, style: const TextStyle(color: LetsBowlTheme.richRed, fontWeight: FontWeight.w800, fontSize: 12)),
                 ),
                 const Spacer(),
-                _PillButton(
-                  text: 'Claim Offer',
-                  bgColor: LetsBowlTheme.black,
-                  textColor: LetsBowlTheme.gold,
-                  onTap: onClaimTap,
-                ),
+                Text(item.title, style: const TextStyle(color: LetsBowlTheme.black, fontSize: 28, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                Text(item.subtitle, style: const TextStyle(color: Colors.black87, height: 1.45, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 16),
+                _PrimaryButton(text: 'Claim Offer', background: LetsBowlTheme.black, foreground: LetsBowlTheme.gold, onTap: onClaimTap),
               ],
             ),
           );
@@ -1205,47 +1033,39 @@ class _OffersCarousel extends StatelessWidget {
   }
 }
 
-class _AboutSection extends StatelessWidget {
-  const _AboutSection();
+class _AboutBlock extends StatelessWidget {
+  const _AboutBlock();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: LetsBowlTheme.softBlack,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: LetsBowlTheme.gold.withOpacity(0.15)),
+        color: LetsBowlTheme.surface,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: LetsBowlTheme.gold.withOpacity(.15)),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'About Us',
-            style: TextStyle(
-              color: LetsBowlTheme.gold,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          Text('About Us', style: TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w800, fontSize: 13)),
           SizedBox(height: 12),
           Text(
-            'LetsBowl is Chennai\'s premier entertainment destination, bringing together world-class bowling lanes, an exciting arcade zone, professional snooker tables, and a vibrant cafe all under one roof. Whether you\'re planning a family outing, a corporate event, or just a fun day with friends, we\'ve got you covered.',
-            style: TextStyle(
-              color: LetsBowlTheme.pureWhite,
-              fontSize: 16,
-              height: 1.55,
-              fontWeight: FontWeight.w500,
-            ),
+            'LetsBowl is Chennai\'s premier entertainment destination, bringing together world-class bowling lanes, an exciting arcade zone, professional snooker tables, and a vibrant cafe—all under one roof. Whether you\'re planning a family outing, a corporate event, or just a fun day with friends, we\'ve got you covered.',
+            style: TextStyle(color: LetsBowlTheme.pureWhite, fontSize: 16, height: 1.6, fontWeight: FontWeight.w500),
           ),
-          SizedBox(height: 14),
-          Text(
-            'BOWLING • ARCADE • SNOOKER • CAFE • PARTY',
-            style: TextStyle(
-              color: LetsBowlTheme.red,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.4,
-            ),
+          SizedBox(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _TagChip('BOWLING'),
+              _TagChip('ARCADE'),
+              _TagChip('SNOOKER'),
+              _TagChip('CAFE'),
+              _TagChip('PARTY'),
+            ],
           ),
         ],
       ),
@@ -1253,16 +1073,29 @@ class _AboutSection extends StatelessWidget {
   }
 }
 
+class _TagChip extends StatelessWidget {
+  const _TagChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(.06),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(label, style: const TextStyle(color: LetsBowlTheme.red, fontWeight: FontWeight.w900, letterSpacing: .3)),
+    );
+  }
+}
+
 class _GallerySection extends StatelessWidget {
-  const _GallerySection({
-    required this.controller,
-    required this.items,
-    required this.onViewGalleryTap,
-  });
+  const _GallerySection({required this.controller, required this.items});
 
   final PageController controller;
   final List<GalleryItem> items;
-  final VoidCallback onViewGalleryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1271,67 +1104,43 @@ class _GallerySection extends StatelessWidget {
       children: [
         const _SectionHeader(
           eyebrow: 'Gallery',
-          title: 'A visual preview of the venue',
-          subtitle:
-              'Swipeable gallery cards. You can later replace these placeholders with the live LetsBowl image URLs or your own CDN images.',
+          title: 'Sliding dummy visuals for the app',
+          subtitle: 'These image cards are placeholders so the interface feels premium until you replace them with final venue photos.',
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 230,
+          height: 250,
           child: PageView.builder(
             controller: controller,
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(26),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF2A2A2A),
-                        LetsBowlTheme.darkRed,
-                        Color(0xFF3C2E14),
-                      ],
-                    ),
-                  ),
+                padding: const EdgeInsets.only(left: 16, right: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Positioned(
-                        right: -10,
-                        top: -20,
-                        child: Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: LetsBowlTheme.gold.withOpacity(0.12),
+                      _NetworkPhoto(item.image),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black.withOpacity(.82)],
                           ),
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(22),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(item.icon, color: LetsBowlTheme.gold, size: 42),
                             const Spacer(),
-                            Text(
-                              item.title,
-                              style: const TextStyle(
-                                color: LetsBowlTheme.pureWhite,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
+                            Text(item.title, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w900, fontSize: 26)),
                             const SizedBox(height: 6),
-                            const Text(
-                              'Gallery preview card',
-                              style: TextStyle(color: LetsBowlTheme.white),
-                            ),
+                            Text(item.subtitle, style: const TextStyle(color: LetsBowlTheme.white, fontSize: 14)),
                           ],
                         ),
                       ),
@@ -1342,26 +1151,13 @@ class _GallerySection extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SizedBox(
-            width: double.infinity,
-            child: _PillButton(
-              text: 'View Full Gallery',
-              bgColor: LetsBowlTheme.gold,
-              textColor: LetsBowlTheme.black,
-              onTap: onViewGalleryTap,
-            ),
-          ),
-        ),
       ],
     );
   }
 }
 
-class _ReviewsSection extends StatelessWidget {
-  const _ReviewsSection({required this.controller, required this.items});
+class _ReviewCarousel extends StatelessWidget {
+  const _ReviewCarousel({required this.controller, required this.items});
 
   final PageController controller;
   final List<ReviewItem> items;
@@ -1369,20 +1165,20 @@ class _ReviewsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 230,
+      height: 240,
       child: PageView.builder(
         controller: controller,
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.only(left: 16, right: 8),
             child: Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: LetsBowlTheme.softBlack,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                color: LetsBowlTheme.surface,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white.withOpacity(.08)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1390,20 +1186,11 @@ class _ReviewsSection extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          color: LetsBowlTheme.red,
-                          shape: BoxShape.circle,
-                        ),
+                        width: 50,
+                        height: 50,
+                        decoration: const BoxDecoration(color: LetsBowlTheme.red, shape: BoxShape.circle),
                         child: Center(
-                          child: Text(
-                            item.initials,
-                            style: const TextStyle(
-                              color: LetsBowlTheme.pureWhite,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                          child: Text(item.initials, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w800)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1411,50 +1198,24 @@ class _ReviewsSection extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              item.name,
-                              style: const TextStyle(
-                                color: LetsBowlTheme.pureWhite,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              item.meta,
-                              style: const TextStyle(
-                                color: LetsBowlTheme.muted,
-                                fontSize: 12,
-                              ),
-                            ),
+                            Text(item.name, style: const TextStyle(color: LetsBowlTheme.pureWhite, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 2),
+                            Text(item.meta, style: const TextStyle(color: LetsBowlTheme.muted, fontSize: 12.5)),
                           ],
                         ),
                       ),
-                      const Icon(
-                        Icons.star_rounded,
-                        color: LetsBowlTheme.gold,
-                      ),
+                      const Icon(Icons.star_rounded, color: LetsBowlTheme.gold),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    item.text,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: LetsBowlTheme.white,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Text(
+                      item.review,
+                      style: const TextStyle(color: LetsBowlTheme.white, height: 1.55, fontWeight: FontWeight.w500),
                     ),
                   ),
-                  const Spacer(),
-                  const Text(
-                    'Google',
-                    style: TextStyle(
-                      color: LetsBowlTheme.gold,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
-                  ),
+                  const SizedBox(height: 8),
+                  const Text('Google', style: TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w800)),
                 ],
               ),
             ),
@@ -1465,8 +1226,8 @@ class _ReviewsSection extends StatelessWidget {
   }
 }
 
-class _FinalCta extends StatelessWidget {
-  const _FinalCta({required this.onTap});
+class _CtaBanner extends StatelessWidget {
+  const _CtaBanner({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -1474,49 +1235,28 @@ class _FinalCta extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(30),
         gradient: const LinearGradient(
-          colors: [LetsBowlTheme.red, LetsBowlTheme.black, LetsBowlTheme.deepGold],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [LetsBowlTheme.red, LetsBowlTheme.black, Color(0xFF5A4816)],
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'THE PLACE WHERE',
-            style: TextStyle(
-              color: LetsBowlTheme.gold,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          const Text('THE PLACE WHERE', style: TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
-          const Text(
-            'MEMORIES ARE MADE',
-            style: TextStyle(
-              color: LetsBowlTheme.pureWhite,
-              fontSize: 31,
-              height: 1.08,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          const Text('MEMORIES ARE MADE', style: TextStyle(color: LetsBowlTheme.pureWhite, fontSize: 32, height: 1.05, fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
           const Text(
-            'From birthday parties to corporate team-building, from casual hangouts to competitive tournaments, LetsBowl is where Chennai comes to play.',
-            style: TextStyle(
-              color: LetsBowlTheme.white,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
+            'From birthday parties to corporate team-building, from casual hangouts to competitive tournaments—LetsBowl is where Chennai comes to play.',
+            style: TextStyle(color: LetsBowlTheme.white, height: 1.55, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 18),
-          _PillButton(
-            text: 'Reserve Your Slot',
-            bgColor: LetsBowlTheme.pureWhite,
-            textColor: LetsBowlTheme.black,
-            onTap: onTap,
-          ),
+          _PrimaryButton(text: 'Reserve Your Slot', background: LetsBowlTheme.pureWhite, foreground: LetsBowlTheme.black, onTap: onTap),
         ],
       ),
     );
@@ -1528,148 +1268,71 @@ class _FooterSection extends StatelessWidget {
     required this.onCallTap,
     required this.onWhatsAppTap,
     required this.onEmailTap,
-    required this.onMapsTap,
-    required this.onFacebookTap,
+    required this.onMapTap,
     required this.onInstagramTap,
+    required this.onFacebookTap,
     required this.onYoutubeTap,
-    required this.onBulkBookingTap,
-    required this.onPartyTap,
-    required this.onTournamentsTap,
+    required this.onBulkTap,
   });
 
   final VoidCallback onCallTap;
   final VoidCallback onWhatsAppTap;
   final VoidCallback onEmailTap;
-  final VoidCallback onMapsTap;
-  final VoidCallback onFacebookTap;
+  final VoidCallback onMapTap;
   final VoidCallback onInstagramTap;
+  final VoidCallback onFacebookTap;
   final VoidCallback onYoutubeTap;
-  final VoidCallback onBulkBookingTap;
-  final VoidCallback onPartyTap;
-  final VoidCallback onTournamentsTap;
+  final VoidCallback onBulkTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: LetsBowlTheme.cardBlack,
-        borderRadius: BorderRadius.circular(28),
+        color: LetsBowlTheme.surface,
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'LetsBowl',
-            style: TextStyle(
-              color: LetsBowlTheme.pureWhite,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          const Text('LetsBowl', style: TextStyle(color: LetsBowlTheme.pureWhite, fontSize: 26, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          const Text(
-            'Chennai\'s Strike Zone',
-            style: TextStyle(
-              color: LetsBowlTheme.gold,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          const Text('Chennai\'s Strike Zone', style: TextStyle(color: LetsBowlTheme.gold, fontWeight: FontWeight.w700)),
           const SizedBox(height: 18),
-          _FooterRow(
-            icon: Icons.call_rounded,
-            text: '+91 85087 00000  •  +91 9040145678  •  044-24560000',
-            onTap: onCallTap,
-          ),
+          _FooterRow(icon: Icons.call_rounded, text: '+91 85087 00000  •  +91 9040145678  •  044-24560000', onTap: onCallTap),
           const SizedBox(height: 10),
-          _FooterRow(
-            icon: Icons.chat_rounded,
-            text: 'WhatsApp Us',
-            onTap: onWhatsAppTap,
-          ),
+          _FooterRow(icon: Icons.chat_rounded, text: 'WhatsApp Us', onTap: onWhatsAppTap),
           const SizedBox(height: 10),
-          _FooterRow(
-            icon: Icons.email_rounded,
-            text: 'letsbowl.97@gmail.com',
-            onTap: onEmailTap,
-          ),
+          _FooterRow(icon: Icons.email_rounded, text: 'letsbowl.97@gmail.com', onTap: onEmailTap),
           const SizedBox(height: 10),
-          _FooterRow(
-            icon: Icons.location_on_rounded,
-            text:
-                'No 1/812, Pillaiyar Koil Street, MCN Nagar Extension, Thoraipakkam, Chennai - 600097',
-            onTap: onMapsTap,
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Open Daily until 11:00 PM',
-            style: TextStyle(
-              color: LetsBowlTheme.muted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Follow Us',
-            style: TextStyle(
-              color: LetsBowlTheme.gold,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          _FooterRow(icon: Icons.location_on_rounded, text: 'No 1/812, Pillaiyar Koil Street, MCN Nagar Extension, Thoraipakkam, Chennai - 600097', onTap: onMapTap),
           const SizedBox(height: 12),
+          const Text('Open Daily until 11:00 PM', style: TextStyle(color: LetsBowlTheme.muted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 18),
           Row(
             children: [
-              _CircleIcon(
-                icon: Icons.camera_alt_rounded,
-                onTap: onInstagramTap,
-              ),
+              _SocialButton(icon: Icons.camera_alt_rounded, onTap: onInstagramTap),
               const SizedBox(width: 8),
-              _CircleIcon(icon: Icons.play_arrow_rounded, onTap: onYoutubeTap),
+              _SocialButton(icon: Icons.play_arrow_rounded, onTap: onYoutubeTap),
               const SizedBox(width: 8),
-              _CircleIcon(icon: Icons.facebook_rounded, onTap: onFacebookTap),
+              _SocialButton(icon: Icons.facebook_rounded, onTap: onFacebookTap),
             ],
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Quick Links',
-            style: TextStyle(
-              color: LetsBowlTheme.gold,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _QuickChip(
-                label: 'Bulk Booking',
-                onTap: onBulkBookingTap,
-                color: LetsBowlTheme.gold,
-                textColor: LetsBowlTheme.black,
-              ),
-              _QuickChip(
-                label: 'Party Hall',
-                onTap: onPartyTap,
-                color: LetsBowlTheme.softBlack,
-                textColor: LetsBowlTheme.pureWhite,
-              ),
-              _QuickChip(
-                label: 'Tournaments',
-                onTap: onTournamentsTap,
-                color: LetsBowlTheme.softBlack,
-                textColor: LetsBowlTheme.pureWhite,
-              ),
+              _MiniActionChip(label: 'Bulk Booking', onTap: onBulkTap),
+              _MiniActionChip(label: 'Party Hall', onTap: onBulkTap),
+              _MiniActionChip(label: 'Tournaments', onTap: onBulkTap),
             ],
           ),
           const SizedBox(height: 18),
-          Divider(color: Colors.white.withOpacity(0.1)),
+          Divider(color: Colors.white.withOpacity(.08)),
           const SizedBox(height: 10),
-          const Text(
-            '© 2026 LetsBowl. All rights reserved.',
-            style: TextStyle(color: LetsBowlTheme.muted, fontSize: 12),
-          ),
+          const Text('© 2026 LetsBowl. All rights reserved.', style: TextStyle(color: LetsBowlTheme.muted, fontSize: 12.5)),
         ],
       ),
     );
@@ -1677,11 +1340,7 @@ class _FooterSection extends StatelessWidget {
 }
 
 class _FooterRow extends StatelessWidget {
-  const _FooterRow({
-    required this.icon,
-    required this.text,
-    required this.onTap,
-  });
+  const _FooterRow({required this.icon, required this.text, required this.onTap});
 
   final IconData icon;
   final String text;
@@ -1696,54 +1355,80 @@ class _FooterRow extends StatelessWidget {
         children: [
           Icon(icon, color: LetsBowlTheme.gold, size: 20),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: LetsBowlTheme.white,
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(color: LetsBowlTheme.white, height: 1.5, fontWeight: FontWeight.w500))),
         ],
       ),
     );
   }
 }
 
-class _PillButton extends StatelessWidget {
-  const _PillButton({
-    required this.text,
-    required this.bgColor,
-    required this.textColor,
-    required this.onTap,
-  });
+class _SocialButton extends StatelessWidget {
+  const _SocialButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withOpacity(.06),
+        ),
+        child: Icon(icon, color: LetsBowlTheme.gold),
+      ),
+    );
+  }
+}
+
+class _MiniActionChip extends StatelessWidget {
+  const _MiniActionChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: LetsBowlTheme.gold,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(label, style: const TextStyle(color: LetsBowlTheme.black, fontWeight: FontWeight.w800)),
+      ),
+    );
+  }
+}
+
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({required this.text, required this.background, required this.foreground, required this.onTap});
 
   final String text;
-  final Color bgColor;
-  final Color textColor;
+  final Color background;
+  final Color foreground;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: bgColor,
+      color: background,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           child: Center(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-              ),
-            ),
+            child: Text(text, style: TextStyle(color: foreground, fontWeight: FontWeight.w800, fontSize: 14.5)),
           ),
         ),
       ),
@@ -1751,231 +1436,39 @@ class _PillButton extends StatelessWidget {
   }
 }
 
-class LetsBowlAnimatedBackground extends StatelessWidget {
-  const LetsBowlAnimatedBackground({
-    super.key,
-    required this.controller,
-  });
+class _NetworkPhoto extends StatelessWidget {
+  const _NetworkPhoto(this.url);
 
-  final Animation<double> controller;
+  final String url;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: _LetsBowlBackgroundPainter(progress: controller.value),
-          child: Container(),
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2B1518), Color(0xFF0E0E0E), Color(0xFF443410)],
+            ),
+          ),
+          child: const Center(
+            child: Icon(Icons.image_not_supported_rounded, color: LetsBowlTheme.gold, size: 42),
+          ),
+        );
+      },
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          color: LetsBowlTheme.softBlack,
+          child: const Center(
+            child: CircularProgressIndicator(color: LetsBowlTheme.gold),
+          ),
         );
       },
     );
-  }
-}
-
-class _LetsBowlBackgroundPainter extends CustomPainter {
-  _LetsBowlBackgroundPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bg = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF090909),
-          Color(0xFF120C0D),
-          Color(0xFF0B0B0B),
-        ],
-      ).createShader(Offset.zero & size);
-
-    canvas.drawRect(Offset.zero & size, bg);
-
-    _drawGlow(canvas, size);
-    _drawFloatingBowlingBalls(canvas, size);
-    _drawPins(canvas, size);
-    _drawGameOrbs(canvas, size);
-    _drawArcLines(canvas, size);
-  }
-
-  void _drawGlow(Canvas canvas, Size size) {
-    final glow1 = Paint()
-      ..color = LetsBowlTheme.red.withOpacity(0.08)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 80);
-
-    final glow2 = Paint()
-      ..color = LetsBowlTheme.gold.withOpacity(0.08)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 90);
-
-    canvas.drawCircle(
-      Offset(size.width * 0.18, size.height * 0.22),
-      110,
-      glow1,
-    );
-
-    canvas.drawCircle(
-      Offset(size.width * 0.82, size.height * 0.32),
-      120,
-      glow2,
-    );
-
-    canvas.drawCircle(
-      Offset(size.width * 0.62, size.height * 0.78),
-      100,
-      glow1,
-    );
-  }
-
-  void _drawFloatingBowlingBalls(Canvas canvas, Size size) {
-    final balls = [
-      Offset(
-        size.width * 0.14,
-        size.height * (0.12 + 0.03 * math.sin(progress * 2 * math.pi)),
-      ),
-      Offset(
-        size.width * 0.86,
-        size.height * (0.24 + 0.04 * math.sin(progress * 2 * math.pi + 1.2)),
-      ),
-      Offset(
-        size.width * 0.18,
-        size.height * (0.68 + 0.05 * math.sin(progress * 2 * math.pi + 2.1)),
-      ),
-      Offset(
-        size.width * 0.78,
-        size.height * (0.88 + 0.03 * math.sin(progress * 2 * math.pi + 0.5)),
-      ),
-    ];
-
-    for (final center in balls) {
-      final ballPaint = Paint()
-        ..shader = RadialGradient(
-          colors: [
-            LetsBowlTheme.pureWhite.withOpacity(0.14),
-            LetsBowlTheme.gold.withOpacity(0.10),
-            LetsBowlTheme.red.withOpacity(0.06),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: center, radius: 34));
-
-      canvas.drawCircle(center, 34, ballPaint);
-
-      final ring = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = LetsBowlTheme.gold.withOpacity(0.12);
-
-      canvas.drawCircle(center, 28, ring);
-
-      final holePaint = Paint()..color = LetsBowlTheme.black.withOpacity(0.18);
-      canvas.drawCircle(center.translate(-6, -4), 3.2, holePaint);
-      canvas.drawCircle(center.translate(4, -8), 3.2, holePaint);
-      canvas.drawCircle(center.translate(2, 4), 3.2, holePaint);
-    }
-  }
-
-  void _drawPins(Canvas canvas, Size size) {
-    final pinColor = Paint()..color = LetsBowlTheme.pureWhite.withOpacity(0.05);
-    final pinStripe = Paint()..color = LetsBowlTheme.red.withOpacity(0.10);
-
-    final positions = [
-      Offset(size.width * 0.90, size.height * 0.14),
-      Offset(size.width * 0.08, size.height * 0.44),
-      Offset(size.width * 0.88, size.height * 0.60),
-      Offset(size.width * 0.12, size.height * 0.90),
-    ];
-
-    for (int i = 0; i < positions.length; i++) {
-      final p = positions[i].translate(
-        0,
-        6 * math.sin(progress * 2 * math.pi + i),
-      );
-      final path = Path();
-      path.moveTo(p.dx, p.dy - 22);
-      path.quadraticBezierTo(p.dx - 12, p.dy - 6, p.dx - 8, p.dy + 18);
-      path.quadraticBezierTo(p.dx, p.dy + 26, p.dx + 8, p.dy + 18);
-      path.quadraticBezierTo(p.dx + 12, p.dy - 6, p.dx, p.dy - 22);
-
-      canvas.drawPath(path, pinColor);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: p.translate(0, -4), width: 18, height: 5),
-          const Radius.circular(3),
-        ),
-        pinStripe,
-      );
-    }
-  }
-
-  void _drawGameOrbs(Canvas canvas, Size size) {
-    final points = [
-      Offset(size.width * 0.36, size.height * 0.18),
-      Offset(size.width * 0.66, size.height * 0.48),
-      Offset(size.width * 0.32, size.height * 0.82),
-      Offset(size.width * 0.72, size.height * 0.12),
-      Offset(size.width * 0.52, size.height * 0.62),
-    ];
-
-    for (int i = 0; i < points.length; i++) {
-      final p = points[i].translate(
-        12 * math.sin(progress * 2 * math.pi + i),
-        8 * math.cos(progress * 2 * math.pi + i),
-      );
-
-      final paint = Paint()
-        ..color = (i % 2 == 0 ? LetsBowlTheme.gold : LetsBowlTheme.red)
-            .withOpacity(0.08);
-
-      canvas.drawCircle(p, 10 + (i % 3) * 4, paint);
-    }
-  }
-
-  void _drawArcLines(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = LetsBowlTheme.gold.withOpacity(0.07)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    final paint2 = Paint()
-      ..color = LetsBowlTheme.red.withOpacity(0.06)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    final path1 = Path()
-      ..moveTo(-30, size.height * 0.20)
-      ..quadraticBezierTo(
-        size.width * 0.40,
-        size.height * (0.10 + 0.03 * math.sin(progress * 2 * math.pi)),
-        size.width + 30,
-        size.height * 0.26,
-      );
-
-    final path2 = Path()
-      ..moveTo(-20, size.height * 0.72)
-      ..quadraticBezierTo(
-        size.width * 0.52,
-        size.height * (0.82 + 0.03 * math.cos(progress * 2 * math.pi)),
-        size.width + 20,
-        size.height * 0.68,
-      );
-
-    final path3 = Path()
-      ..moveTo(size.width * 0.18, -20)
-      ..quadraticBezierTo(
-        size.width * (0.10 + 0.02 * math.sin(progress * 2 * math.pi)),
-        size.height * 0.42,
-        size.width * 0.16,
-        size.height + 20,
-      );
-
-    canvas.drawPath(path1, paint);
-    canvas.drawPath(path2, paint2);
-    canvas.drawPath(path3, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LetsBowlBackgroundPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }
