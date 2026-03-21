@@ -56,7 +56,7 @@ class LetsBowlTheme {
 
 class LetsBowlAssets {
   static const String logo = 'https://gobus.space/logo.png';
-  static const String heroVideo = 'https://gobus.space/bowling.mp4';
+  static const String heroVideo = 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4';
 
   static const String whatsappIcon =
       'https://img.icons8.com/color/96/whatsapp--v1.png';
