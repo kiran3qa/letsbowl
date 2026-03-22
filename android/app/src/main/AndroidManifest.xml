@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- इंटरनेट परमिशन (REQUIRED for video streaming) -->
+   
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
