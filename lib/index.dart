@@ -1306,19 +1306,7 @@ class _HeroMainCopy extends StatelessWidget {
             letterSpacing: -.8,
           ),
         ),
-        const SizedBox(height: 16),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: const Text(
-            'Completely rebuilt with stronger layout structure, better line lengths, cleaner text balance and a more premium visual hierarchy in red, white, gold and black.',
-            style: TextStyle(
-              color: LetsBowlTheme.muted,
-              fontSize: 15.6,
-              height: 1.7,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
+        const SizedBox(height: 16)
       ],
     );
   }
