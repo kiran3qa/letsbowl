@@ -1206,32 +1206,6 @@ class _HeroCompactLayout extends StatelessWidget {
         const SizedBox(height: 24),
         const _HeroMainCopy(isWide: false),
         const SizedBox(height: 22),
-        Row(
-          children: [
-            Expanded(
-              child: _TopActionButton(
-                title: 'Call Now',
-                subtitle: '+91 85087 00000',
-                icon: Icons.call_rounded,
-                color: LetsBowlTheme.green,
-                onTap: onCallTap,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _TopActionButton(
-                title: 'WhatsApp',
-                subtitle: 'Quick booking support',
-                color: LetsBowlTheme.green,
-                iconWidget: const _NetworkIcon(
-                  LetsBowlAssets.whatsappIcon,
-                  size: 18,
-                ),
-                onTap: onWhatsAppTap,
-              ),
-            ),
-          ],
-        ),
         const SizedBox(height: 14),
         _PrimaryButton(
           text: 'Reserve Your Slot',
