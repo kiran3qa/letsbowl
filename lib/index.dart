@@ -1291,25 +1291,25 @@ class _HeroMainCopy extends StatelessWidget {
 
   final bool isWide;
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'TOP-NOTCH ENTERTAINMENT\nDESIGNED TO IMPRESS',
-          style: TextStyle(
-            color: LetsBowlTheme.white,
-            fontSize: isWide ? 52 : 34,
-            height: 1.02,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -.8
-          ),
-        ),
-        const SizedBox(height: 16)
-      ],
-    );
-  }
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         'TOP-NOTCH ENTERTAINMENT\nDESIGNED TO IMPRESS',
+  //         style: TextStyle(
+  //           color: LetsBowlTheme.white,
+  //           fontSize: isWide ? 52 : 34,
+  //           height: 1.02,
+  //           fontWeight: FontWeight.w900,
+  //           letterSpacing: -.8
+  //         ),
+  //       ),
+  //       const SizedBox(height: 16)
+  //     ],
+  //   );
+  // }
 }
 
 class _HeroVideoBackground extends StatefulWidget {
