@@ -1303,7 +1303,7 @@ class _HeroMainCopy extends StatelessWidget {
             fontSize: isWide ? 52 : 34,
             height: 1.02,
             fontWeight: FontWeight.w900,
-            letterSpacing: -.8,
+            letterSpacing: -.8
           ),
         ),
         const SizedBox(height: 16)
